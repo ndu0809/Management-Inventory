@@ -521,16 +521,37 @@ button:disabled {
   }
 }
 
+
 @media (max-width: 760px) {
-  .main-content {
+  .app-layout {
+    flex-direction: column;
     width: 100%;
+    min-width: 0;
+  }
+
+  .main-content {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     min-height: 0;
     margin-left: 0;
     padding: 20px 16px 24px;
+    overflow-x: hidden;
+  }
+
+  .page-header {
+    width: 100%;
+    min-width: 0;
   }
 
   .page-header h1 {
     font-size: 18px;
+  }
+
+  .content-section {
+    width: 100%;
+    min-width: 0;
   }
 
   .page-toolbar {
@@ -540,6 +561,7 @@ button:disabled {
 
   .page-toolbar-actions {
     width: 100%;
+    min-width: 0;
   }
 
   .search-box {
@@ -557,6 +579,42 @@ button:disabled {
 
   .analytics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    width: 100%;
+    padding: 16px 12px 22px;
+  }
+
+  .page-toolbar-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .search-box {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .form-panel {
+    padding: 14px;
+  }
+
+  .form-grid input,
+  .form-grid select,
+  .form-grid textarea {
+    font-size: 16px;
+  }
+
+  .form-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .analytics-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

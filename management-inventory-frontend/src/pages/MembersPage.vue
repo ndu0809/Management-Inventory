@@ -1,3 +1,4 @@
+
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import api from '../services/api'
@@ -81,6 +82,7 @@ async function loadMembers() {
           : []
 
     openActionId.value = null
+    page.value = Math.min(page.value, totalPages.value)
   } catch (error: unknown) {
     console.error('Gagal memuat anggota:', error)
 
@@ -150,8 +152,6 @@ async function saveMember() {
     (member) => member.id === memberEditingId.value,
   )
 
-  // Pertahankan field lama agar data anggota tidak hilang
-  // ketika backend masih menggunakan member_code dan email.
   const payload = {
     member_code: existingMember?.member_code ?? '',
     name,
@@ -264,12 +264,12 @@ onMounted(loadMembers)
 </script>
 
 <template>
-  <section class="members-page">
-    <header class="members-header">
-      <h1>Management Anggota</h1>
+  <section class="content-section members-page">
+    <header class="page-toolbar members-header">
+      <h2>Management Anggota</h2>
 
-      <div class="members-toolbar">
-        <label class="members-search">
+      <div class="page-toolbar-actions members-toolbar">
+        <label class="search-box members-search">
           <svg
             viewBox="0 0 24 24"
             width="19"
@@ -293,7 +293,7 @@ onMounted(loadMembers)
           <button
             type="button"
             class="filter-button"
-            aria-label="Filter anggota"
+            aria-label="Reset pencarian"
             @click="searchQuery = ''"
           >
             <svg
@@ -312,7 +312,7 @@ onMounted(loadMembers)
 
         <button
           type="button"
-          class="add-member-button"
+          class="primary-button add-member-button"
           :disabled="memberSaving"
           @click="openMemberForm()"
         >
@@ -332,7 +332,10 @@ onMounted(loadMembers)
 
     <section v-if="showMemberForm" class="member-form-panel">
       <div class="member-form-heading">
-        <h2>{{ memberEditingId !== null ? 'Edit Anggota' : 'Tambah Anggota' }}</h2>
+        <h3>
+          {{ memberEditingId !== null ? 'Edit Anggota' : 'Tambah Anggota' }}
+        </h3>
+
         <button
           type="button"
           class="close-form-button"
@@ -387,7 +390,7 @@ onMounted(loadMembers)
 
           <button
             type="submit"
-            class="add-member-button"
+            class="primary-button add-member-button"
             :disabled="memberSaving"
           >
             {{ memberSaving ? 'Menyimpan...' : 'Simpan Anggota' }}
@@ -400,8 +403,8 @@ onMounted(loadMembers)
       Memuat data anggota...
     </div>
 
-    <div class="members-table-wrap">
-      <table class="members-table">
+    <div class="table-wrapper members-table-wrap">
+      <table class="data-table members-table">
         <thead>
           <tr>
             <th class="number-column">No</th>
@@ -440,6 +443,7 @@ onMounted(loadMembers)
                   >
                     Edit
                   </button>
+
                   <button
                     type="button"
                     class="delete-action"
@@ -467,9 +471,10 @@ onMounted(loadMembers)
       </table>
     </div>
 
-    <footer class="members-pagination">
+    <footer class="pagination-footer members-pagination">
       <div class="items-per-page">
         <span>Showing</span>
+
         <select
           v-model.number="itemsPerPage"
           aria-label="Jumlah anggota per halaman"
@@ -479,10 +484,11 @@ onMounted(loadMembers)
           <option :value="10">10</option>
           <option :value="20">20</option>
         </select>
+
         <span>items per page</span>
       </div>
 
-      <nav class="pagination-controls" aria-label="Navigasi halaman">
+      <nav class="pagination pagination-controls" aria-label="Navigasi halaman">
         <button
           type="button"
           :disabled="page <= 1"
@@ -517,42 +523,45 @@ onMounted(loadMembers)
 .members-page {
   width: 100%;
   min-width: 0;
-  color: #000000;
+  color: #000;
 }
 
+/* HEADER */
 .members-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 28px;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
-.members-header h1 {
+.members-header h2 {
+  flex-shrink: 0;
   margin: 0;
-  font-size: 16px;
-  font-weight: 650;
-  letter-spacing: -0.2px;
+  font-size: inherit;
+  font-weight: inherit;
 }
 
+/* SEARCH DAN TOMBOL TAMBAH SELALU SEJAJAR */
 .members-toolbar {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 10px;
   min-width: 0;
 }
 
 .members-search {
   display: flex;
   align-items: center;
-  gap: 12px;
-  width: min(100%, 310px);
-  height: 44px;
-  padding: 0 14px;
-  border-radius: 24px;
-  background: #eef3f5;
-  color: #274153;
+  flex: 1 1 220px;
+  width: 220px;
+  min-width: 150px;
+  gap: 8px;
 }
 
 .members-search input {
@@ -562,12 +571,6 @@ onMounted(loadMembers)
   border: 0;
   outline: none;
   background: transparent;
-  color: #242424;
-  font-size: 13px;
-}
-
-.members-search input::placeholder {
-  color: #596b78;
 }
 
 .filter-button {
@@ -578,35 +581,24 @@ onMounted(loadMembers)
   border: 0;
   background: transparent;
   color: #183e52;
+  cursor: pointer;
 }
 
 .add-member-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 0 18px;
-  border: 1px solid #080808;
-  border-radius: 13px;
-  background: #050505;
-  color: #d9ff86;
-  font-size: 13px;
-  font-weight: 600;
+  flex: 0 0 auto;
   white-space: nowrap;
-  transition: background 0.18s ease;
-}
-
-.add-member-button:hover:not(:disabled) {
-  background: #252525;
 }
 
 .plus-icon {
-  font-size: 23px;
+  font-size: 20px;
   font-weight: 300;
   line-height: 1;
 }
 
+/* NOTIFIKASI */
 .members-notice {
   margin-bottom: 16px;
   padding: 12px 14px;
@@ -630,40 +622,16 @@ onMounted(loadMembers)
   font-size: 13px;
 }
 
+/* TABEL */
 .members-table-wrap {
   width: 100%;
+  min-width: 0;
   overflow-x: auto;
 }
 
 .members-table {
   width: 100%;
-  border-collapse: collapse;
-  table-layout: auto;
   text-align: left;
-}
-
-.members-table th {
-  padding: 19px 14px;
-  border-bottom: 1px solid #f0f0f0;
-  color: #111;
-  font-size: 14px;
-  font-weight: 650;
-  white-space: nowrap;
-}
-
-.members-table td {
-  padding: 24px 14px;
-  border-bottom: 1px solid #f5f5f5;
-  color: #353535;
-  font-size: 14px;
-}
-
-.members-table tbody tr {
-  transition: background 0.15s ease;
-}
-
-.members-table tbody tr:hover {
-  background: #fcfcfc;
 }
 
 .members-table .number-column {
@@ -683,7 +651,7 @@ onMounted(loadMembers)
   font-weight: 500;
 }
 
-.action-cell {
+.members-table .action-cell {
   text-align: center;
 }
 
@@ -702,8 +670,9 @@ onMounted(loadMembers)
   height: 35px;
   padding: 0;
   border: 1px solid #a4a4a4;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #fff;
+  cursor: pointer;
 }
 
 .more-button:hover {
@@ -740,6 +709,7 @@ onMounted(loadMembers)
   color: #252525;
   text-align: left;
   font-size: 13px;
+  cursor: pointer;
 }
 
 .action-menu button:hover {
@@ -750,69 +720,52 @@ onMounted(loadMembers)
   color: #c62828;
 }
 
-.empty-table {
-  padding: 36px 14px !important;
-  color: #777 !important;
+.members-table .empty-table {
+  padding: 30px 12px;
+  color: #777;
   text-align: center;
 }
 
+/* PAGINATION */
 .members-pagination {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  margin-top: 30px;
+  flex-wrap: wrap;
 }
 
 .items-per-page {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   color: #505050;
   font-size: 13px;
   white-space: nowrap;
 }
 
 .items-per-page select {
-  height: 39px;
-  padding: 0 12px;
+  max-width: 100%;
+  padding: 6px 10px;
   border: 1px solid #d8d8d8;
-  border-radius: 12px;
-  background: white;
+  border-radius: 8px;
+  background: #fff;
   color: #333;
 }
 
 .pagination-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.pagination-controls button {
-  min-width: 38px;
-  height: 39px;
-  padding: 0 10px;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  background: transparent;
-  color: #333;
-  font-size: 13px;
-}
-
-.pagination-controls button.active {
-  border-color: #d4d4d4;
-  background: #fff;
-}
-
-.pagination-controls button:disabled {
-  color: #aaa;
-}
-
+/* FORM TAMBAH DAN EDIT */
 .member-form-panel {
-  margin-bottom: 26px;
-  padding: 24px;
+  margin-bottom: 24px;
+  padding: 20px;
   border: 1px solid #ececec;
-  border-radius: 14px;
+  border-radius: 12px;
   background: #fff;
 }
 
@@ -821,45 +774,51 @@ onMounted(loadMembers)
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 22px;
+  margin-bottom: 18px;
 }
 
-.member-form-heading h2 {
+.member-form-heading h3 {
   margin: 0;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 650;
 }
 
 .close-form-button {
-  width: 34px;
-  height: 34px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: 1px solid #e4e4e4;
-  border-radius: 9px;
+  border-radius: 8px;
   background: #fff;
   color: #333;
   font-size: 22px;
+  cursor: pointer;
 }
 
 .member-form {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  gap: 16px;
 }
 
 .member-form label {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
+  min-width: 0;
   color: #333;
   font-size: 13px;
   font-weight: 550;
 }
 
 .member-form input {
+  box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  height: 43px;
-  padding: 0 12px;
+  min-height: 38px;
+  padding: 8px 11px;
   border: 1px solid #dedede;
   border-radius: 8px;
   outline: none;
@@ -877,32 +836,50 @@ onMounted(loadMembers)
   display: flex;
   grid-column: 1 / -1;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 10px;
-  margin-top: 5px;
+  margin-top: 4px;
 }
 
 .cancel-button {
-  min-height: 42px;
-  padding: 0 16px;
+  padding: 8px 14px;
   border: 1px solid #dedede;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #fff;
   color: #333;
   font-size: 13px;
+  cursor: pointer;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* TABLET */
 @media (max-width: 900px) {
   .members-header {
-    align-items: flex-start;
+    align-items: stretch;
     flex-direction: column;
+    gap: 12px;
   }
 
   .members-toolbar {
+    display: flex;
     width: 100%;
+    flex-direction: row;
+    flex-wrap: nowrap;
   }
 
   .members-search {
-    flex: 1;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+
+  .members-toolbar .add-member-button {
+    flex: 0 0 auto;
+    width: auto;
   }
 
   .member-form {
@@ -910,24 +887,36 @@ onMounted(loadMembers)
   }
 }
 
+/* HP */
 @media (max-width: 600px) {
   .members-toolbar {
-    align-items: stretch;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
   }
 
   .members-search {
-    width: 100%;
-    min-height: 44px;
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    gap: 6px;
   }
 
-  .add-member-button {
-    width: 100%;
+  .members-search input {
+    font-size: 12px;
   }
 
-  .members-table th,
-  .members-table td {
-    padding: 16px 12px;
+  .members-toolbar .add-member-button {
+    flex: 0 0 auto;
+    width: auto;
+    padding: 0 10px;
+    gap: 5px;
+    font-size: 12px;
+  }
+
+  .plus-icon {
+    font-size: 18px;
   }
 
   .members-pagination {
@@ -936,7 +925,7 @@ onMounted(loadMembers)
   }
 
   .pagination-controls {
-    flex-wrap: wrap;
+    max-width: 100%;
   }
 
   .member-form {
@@ -944,12 +933,11 @@ onMounted(loadMembers)
   }
 
   .member-form-panel {
-    padding: 17px;
+    padding: 16px;
   }
 }
 
-
-/* ===== DARK MODE: MANAGEMENT ANGGOTA ===== */
+/* DARK MODE */
 :global(.dark-theme) .members-page,
 :global(.dark-theme) .members-page * {
   color-scheme: dark;
@@ -959,7 +947,6 @@ onMounted(loadMembers)
   color: #e5e7eb;
 }
 
-:global(.dark-theme) .members-page h1,
 :global(.dark-theme) .members-page h2,
 :global(.dark-theme) .members-page h3 {
   color: #f3f4f6;
@@ -1005,7 +992,19 @@ onMounted(loadMembers)
   background-color: #252a31;
 }
 
-:global(.dark-theme) .members-page button:not(.primary-button):not(.danger-button) {
+:global(.dark-theme) .members-page .more-button,
+:global(.dark-theme) .members-page .close-form-button,
+:global(.dark-theme) .members-page .cancel-button {
+  background-color: #252a31;
+  border-color: #414752;
+  color: #e5e7eb;
+}
+
+:global(.dark-theme) .members-page .more-button span {
+  background-color: #e5e7eb;
+}
+
+:global(.dark-theme) .members-page .action-menu button {
   color: #e5e7eb;
 }
 
@@ -1016,12 +1015,12 @@ onMounted(loadMembers)
 
 :global(.dark-theme) .members-page .pagination-controls button.active {
   background-color: #4b5563;
-  color: #ffffff;
+  color: #fff;
 }
 
 :global(.dark-theme) .members-page .members-loading,
 :global(.dark-theme) .members-page .empty-table {
-  color: #9ca3af !important;
+  color: #9ca3af;
 }
 
 :global(.dark-theme) .members-page .members-notice.success {
@@ -1035,5 +1034,4 @@ onMounted(loadMembers)
   border-color: #713b3b;
   color: #ffb4b4;
 }
-
 </style>

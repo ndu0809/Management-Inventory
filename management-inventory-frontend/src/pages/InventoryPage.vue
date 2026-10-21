@@ -85,7 +85,12 @@ const emptyForm = (): ItemForm => ({
 const form = ref<ItemForm>(emptyForm())
 
 function mapApiItem(item: ApiItem): Inventory {
-  const statuses: ItemStatus[] = ['Baik', 'Rusak', 'Tidak dipakai', 'Dilelang']
+  const statuses: ItemStatus[] = [
+    'Baik',
+    'Rusak',
+    'Tidak dipakai',
+    'Dilelang',
+  ]
 
   return {
     member_id: item.member_id ?? item.member?.id ?? null,
@@ -95,7 +100,9 @@ function mapApiItem(item: ApiItem): Inventory {
     type: item.category || '—',
     serial_number: item.serial_number || '—',
     specification: item.specification || item.description || '—',
-    status: statuses.includes(item.status as ItemStatus) ? (item.status as ItemStatus) : 'Baik',
+    status: statuses.includes(item.status as ItemStatus)
+      ? (item.status as ItemStatus)
+      : 'Baik',
     assigned: item.member?.name || item.assigned || '—',
     department: item.department || '—',
     quantity: Number(item.quantity) || 0,
@@ -121,6 +128,7 @@ async function loadInventory() {
           : []
 
     inventory.value = rows.map(mapApiItem)
+    openAction.value = null
   } catch (error: unknown) {
     console.error('Gagal memuat inventaris:', error)
 
@@ -139,7 +147,8 @@ async function loadInventory() {
     }
 
     errorMessage.value =
-      err.response?.data?.message || 'Data gagal dimuat. Periksa server Laravel dan koneksi API.'
+      err.response?.data?.message ||
+      'Data gagal dimuat. Periksa server Laravel dan koneksi API.'
   } finally {
     loading.value = false
   }
@@ -165,7 +174,10 @@ const filteredInventory = computed(() => {
 })
 
 const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredInventory.value.length / itemsPerPage.value)),
+  Math.max(
+    1,
+    Math.ceil(filteredInventory.value.length / itemsPerPage.value),
+  ),
 )
 
 const paginatedInventory = computed(() => {
@@ -182,6 +194,10 @@ watch(totalPages, (total) => {
   if (page.value > total) page.value = total
 })
 
+function toggleAction(id: number) {
+  openAction.value = openAction.value === id ? null : id
+}
+
 function statusClass(status: string) {
   return {
     'status-good': status === 'Baik',
@@ -195,6 +211,7 @@ function openAddForm() {
   editingId.value = null
   form.value = emptyForm()
   selectedMemberId.value = null
+  openAction.value = null
   showForm.value = true
   errorMessage.value = ''
   successMessage.value = ''
@@ -236,9 +253,13 @@ async function saveItem() {
   errorMessage.value = ''
   successMessage.value = ''
 
-  const existingItem = inventory.value.find((item) => item.id === editingId.value)
+  const existingItem = inventory.value.find(
+    (item) => item.id === editingId.value,
+  )
 
-  const selectedMember = members.value.find((member) => member.id === selectedMemberId.value)
+  const selectedMember = members.value.find(
+    (member) => member.id === selectedMemberId.value,
+  )
 
   const payload = {
     name: form.value.name.trim(),
@@ -248,10 +269,11 @@ async function saveItem() {
     price: existingItem?.price ?? 0,
     description: form.value.description.trim() || null,
     status: form.value.status,
-    assigned: form.value.assigned.trim() || null,
+    assigned: selectedMember?.name ?? (form.value.assigned.trim() || null),
     department: form.value.department.trim() || null,
     serial_number: form.value.serial_number.trim() || null,
     specification: form.value.description.trim() || null,
+    member_id: selectedMemberId.value,
   }
 
   if (!payload.name || !payload.sku || !payload.category) {
@@ -307,23 +329,31 @@ async function saveItem() {
 
     errorMessage.value = validationErrors
       ? Object.values(validationErrors).flat().join(' ')
-      : err.response?.data?.message || 'Data gagal disimpan. Periksa input dan koneksi Laravel.'
+      : err.response?.data?.message ||
+        'Data gagal disimpan. Periksa input dan koneksi Laravel.'
   } finally {
     saving.value = false
   }
 }
 
 async function removeItem(id: number) {
-  if (!window.confirm('Yakin ingin menghapus data inventaris ini?')) return
+  const item = inventory.value.find((row) => row.id === id)
+
+  const confirmed = window.confirm(
+    `Yakin ingin menghapus data inventaris "${item?.item ?? 'ini'}"?`,
+  )
+
+  if (!confirmed) return
 
   errorMessage.value = ''
   successMessage.value = ''
+  openAction.value = null
 
   try {
     await api.delete(`/items/${id}`)
 
     inventory.value = inventory.value.filter((item) => item.id !== id)
-    openAction.value = null
+
     successMessage.value = 'Data inventaris berhasil dihapus.'
   } catch (error: unknown) {
     console.error('Gagal menghapus inventaris:', error)
@@ -342,9 +372,8 @@ async function removeItem(id: number) {
       return
     }
 
-    errorMessage.value = err.response?.data?.message || 'Data gagal dihapus dari server.'
-
-    openAction.value = null
+    errorMessage.value =
+      err.response?.data?.message || 'Data gagal dihapus dari server.'
   }
 }
 
@@ -381,7 +410,11 @@ onMounted(() => {
       <div class="page-toolbar-actions">
         <label class="search-box">
           <span>⌕</span>
-          <input v-model="searchQuery" type="search" placeholder="Cari inventaris..." />
+          <input
+            v-model="searchQuery"
+            type="search"
+            placeholder="Cari inventaris..."
+          />
         </label>
 
         <button
@@ -411,22 +444,41 @@ onMounted(() => {
       <div class="form-grid">
         <label>
           Nama barang *
-          <input v-model="form.name" required maxlength="255" placeholder="Contoh: Laptop Lenovo" />
+          <input
+            v-model="form.name"
+            required
+            maxlength="255"
+            placeholder="Contoh: Laptop Lenovo"
+          />
         </label>
 
         <label>
           Inventaris ID / SKU *
-          <input v-model="form.sku" required maxlength="100" placeholder="Contoh: INV-001" />
+          <input
+            v-model="form.sku"
+            required
+            maxlength="100"
+            placeholder="Contoh: INV-001"
+          />
         </label>
 
         <label>
           Type / Kategori *
-          <input v-model="form.category" required maxlength="100" placeholder="Contoh: Laptop" />
+          <input
+            v-model="form.category"
+            required
+            maxlength="100"
+            placeholder="Contoh: Laptop"
+          />
         </label>
 
         <label>
           Serial Number
-          <input v-model="form.serial_number" maxlength="255" placeholder="Nomor seri barang" />
+          <input
+            v-model="form.serial_number"
+            maxlength="255"
+            placeholder="Nomor seri barang"
+          />
         </label>
 
         <label>
@@ -444,7 +496,11 @@ onMounted(() => {
           <select v-model="selectedMemberId">
             <option :value="null">Belum ditugaskan</option>
 
-            <option v-for="member in members" :key="member.id" :value="member.id">
+            <option
+              v-for="member in members"
+              :key="member.id"
+              :value="member.id"
+            >
               {{ member.name }}
             </option>
           </select>
@@ -452,7 +508,11 @@ onMounted(() => {
 
         <label>
           Department
-          <input v-model="form.department" maxlength="255" placeholder="Contoh: IT" />
+          <input
+            v-model="form.department"
+            maxlength="255"
+            placeholder="Contoh: IT"
+          />
         </label>
 
         <label class="full-field">
@@ -466,17 +526,34 @@ onMounted(() => {
       </div>
 
       <div class="form-actions">
-        <button type="button" class="secondary-button" :disabled="saving" @click="closeForm">
+        <button
+          type="button"
+          class="secondary-button"
+          :disabled="saving"
+          @click="closeForm"
+        >
           Batal
         </button>
 
-        <button type="submit" class="primary-button" :disabled="saving">
-          {{ saving ? 'Menyimpan...' : editingId !== null ? 'Simpan Perubahan' : 'Simpan Data' }}
+        <button
+          type="submit"
+          class="primary-button"
+          :disabled="saving"
+        >
+          {{
+            saving
+              ? 'Menyimpan...'
+              : editingId !== null
+                ? 'Simpan Perubahan'
+                : 'Simpan Data'
+          }}
         </button>
       </div>
     </form>
 
-    <div v-if="loading" class="loading-state">Memuat data inventaris dari server...</div>
+    <div v-if="loading" class="loading-state">
+      Memuat data inventaris dari server...
+    </div>
 
     <div class="table-wrapper">
       <table class="data-table">
@@ -491,7 +568,7 @@ onMounted(() => {
             <th>Status</th>
             <th>Assign</th>
             <th>Department</th>
-            <th>Action</th>
+            <th class="action-column">Action</th>
           </tr>
         </thead>
 
@@ -513,13 +590,40 @@ onMounted(() => {
             <td>{{ item.assigned }}</td>
             <td>{{ item.department }}</td>
 
-            <td>
-              <div class="row-actions">
-                <button type="button" class="secondary-button" @click="editItem(item)">Edit</button>
-
-                <button type="button" class="danger-button" @click="removeItem(item.id)">
-                  Hapus
+            <!-- Action mengikuti Management Anggota -->
+            <td class="action-cell">
+              <div class="member-action-wrap">
+                <button
+                  type="button"
+                  class="more-button"
+                  :aria-label="`Aksi untuk ${item.item}`"
+                  :aria-expanded="openAction === item.id"
+                  @click="toggleAction(item.id)"
+                >
+                  <span></span>
+                  <span></span>
+                  <span></span>
                 </button>
+
+                <div
+                  v-if="openAction === item.id"
+                  class="action-menu"
+                >
+                  <button
+                    type="button"
+                    @click="editItem(item)"
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    class="delete-action"
+                    @click="removeItem(item.id)"
+                  >
+                    Hapus
+                  </button>
+                </div>
               </div>
             </td>
           </tr>
@@ -549,7 +653,11 @@ onMounted(() => {
       </div>
 
       <div class="pagination">
-        <button type="button" :disabled="page <= 1" @click="page = Math.max(1, page - 1)">
+        <button
+          type="button"
+          :disabled="page <= 1"
+          @click="page = Math.max(1, page - 1)"
+        >
           Sebelumnya
         </button>
 
@@ -574,3 +682,114 @@ onMounted(() => {
     </footer>
   </section>
 </template>
+
+<style scoped>
+/* ===== ACTION: SAMA DENGAN MANAGEMENT ANGGOTA ===== */
+
+.action-column {
+  width: 100px;
+  text-align: center;
+}
+
+.action-cell {
+  text-align: center;
+}
+
+.member-action-wrap {
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.more-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 35px;
+  height: 35px;
+  padding: 0;
+  border: 1px solid #a4a4a4;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.more-button:hover {
+  background: #f6f6f6;
+}
+
+.more-button span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #333;
+}
+
+.action-menu {
+  position: absolute;
+  z-index: 20;
+  top: 40px;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  width: 130px;
+  padding: 5px;
+  border: 1px solid #e7e7e7;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 25px #00000012;
+}
+
+.action-menu button {
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #252525;
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.action-menu button:hover {
+  background: #f5f5f5;
+}
+
+.action-menu .delete-action {
+  color: #c62828;
+}
+
+/* ===== DARK MODE ===== */
+
+:global(.dark-theme) .more-button {
+  border-color: #414752;
+  background: #252a31;
+}
+
+:global(.dark-theme) .more-button:hover {
+  background: #343a43;
+}
+
+:global(.dark-theme) .more-button span {
+  background: #e5e7eb;
+}
+
+:global(.dark-theme) .action-menu {
+  border-color: #343941;
+  background: #1c1f24;
+}
+
+:global(.dark-theme) .action-menu button {
+  color: #e5e7eb;
+}
+
+:global(.dark-theme) .action-menu button:hover {
+  background: #343a43;
+}
+
+:global(.dark-theme) .action-menu .delete-action {
+  color: #ff7777;
+}
+</style>
