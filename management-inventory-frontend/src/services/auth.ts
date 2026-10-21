@@ -1,4 +1,3 @@
-
 import api from './api'
 
 export type LoginResponse = {
@@ -23,7 +22,11 @@ export async function login(email: string, password: string) {
   return response.data
 }
 
-export function logout() {
-  localStorage.removeItem('auth_token')
-  localStorage.removeItem('auth_user')
+export async function logout() {
+  try {
+    await api.post('/logout')
+  } finally {
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('auth_user')
+  }
 }

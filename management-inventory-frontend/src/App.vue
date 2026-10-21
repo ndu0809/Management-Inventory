@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar.vue'
 import InventoryPage from './pages/InventoryPage.vue'
 import MembersPage from './pages/MembersPage.vue'
 import AnalyticsPage from './pages/AnalyticsPage.vue'
+import { logout as logoutApi } from './services/auth'
 
 const router = useRouter()
 const activePage = ref('Data Inventaris')
@@ -31,9 +32,15 @@ function toggleTheme() {
 }
 
 async function logout() {
-  localStorage.removeItem('auth_token')
-  localStorage.removeItem('auth_user')
-  await router.replace('/login')
+  try {
+    await logoutApi()
+  } catch (error) {
+    console.error('Logout API gagal:', error)
+  } finally {
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('auth_user')
+    await router.replace('/login')
+  }
 }
 
 onMounted(readCurrentUser)
